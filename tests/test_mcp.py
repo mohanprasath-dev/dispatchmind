@@ -14,7 +14,7 @@ import base64
 from pathlib import Path
 import pytest
 
-from core.models import Event, Order
+from core.models import Event, Order, Degraded
 from core.store import get_store
 from mcp_servers.docs_server import (
     fallback_get_file,
@@ -211,13 +211,15 @@ def test_weather_server_forecast_and_rain_risk():
     """Verify weather forecasting and rain risk detection."""
     # Chennai coordinates
     lat, lng = 13.0827, 80.2707
-    forecast = forecast_for_point(lat=lat, lng=lng)
+    res = forecast_for_point(lat=lat, lng=lng)
+    forecast = res.fallback_result if isinstance(res, Degraded) else res
 
     assert "temperature_c" in forecast
     assert "condition" in forecast
     assert forecast["latitude"] is not None
 
-    risk = rain_risk(lat=lat, lng=lng, window_hours=3)
+    res_risk = rain_risk(lat=lat, lng=lng, window_hours=3)
+    risk = res_risk.fallback_result if isinstance(res_risk, Degraded) else res_risk
     assert "rain_probability" in risk
     assert "has_risk" in risk
     assert isinstance(risk["has_risk"], bool)
