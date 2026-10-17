@@ -70,6 +70,3 @@ gcloud run deploy dispatchmind --source . --region asia-south1 --allow-unauthent
 | 429 from Gemini | Fallback model engages automatically; wait or lower `MONITOR_INTERVAL_SEC` |
 | Maps errors | App falls back to haversine estimates and logs an event |
 | No Telegram messages | Messages print to console and the UI log in demo mode |
-
-## Team
-Add names and roles here.
