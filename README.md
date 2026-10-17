@@ -2,6 +2,12 @@
 
 Multi-agent system that automates order intake, route planning, live monitoring, exception recovery, customer messaging and proof of delivery for small and mid fleet operators.
 
+## Live Deployment
+- **Cloud Run URL**: [https://dispatchmind-922729192321.asia-south1.run.app](https://dispatchmind-922729192321.asia-south1.run.app)
+- **GCP Project**: `gen-lang-client-0765287381`
+- **Region**: `asia-south1` (Mumbai)
+- **Execution Specifications**: See [AGENTS.md](AGENTS.md) for detailed runtime specs, agent contracts, and execution commands.
+
 ## Competition criteria map
 | Criterion | Implementation |
 |---|---|
@@ -44,18 +50,44 @@ Open http://localhost:8000
 4. Send a delivery photo as the driver. Order closes with POD.
 5. Click "Run feedback". See ETA error before and after.
 
-## ADK dev UI
+## Executing the Agents
+
+Comprehensive agent contracts, resilience architecture, and tool rosters are documented in [AGENTS.md](AGENTS.md).
+
+### 1. Interactive Web Dashboard
+Run the FastAPI server locally:
+```bash
+uvicorn app.main:app --reload
 ```
+Open `http://localhost:8000` to interact with the dispatch dashboard, parse invoices, trigger route plans, simulate breakdowns, and view real-time agent telemetry.
+
+### 2. Google ADK Dev UI
+Inspect and interact with each ADK agent via the visual workbench:
+```bash
 adk web agents
+```
+
+### 3. Programmatic Agent Invocation
+Individual agents can be executed directly in Python:
+```python
+from agents.intake import process_intake
+from agents.planner import plan_routes
+from agents.monitor import check_telemetry
+from agents.recovery import evaluate_alert
+
+# Example: Run intake on a sample invoice
+result = process_intake("data/sample_orders/INV-2026-001.pdf")
+print(result)
+```
+
+### 4. Running the Test Suite
+Run the 54 unit tests covering intake, planning, resilience, and MCP tools:
+```bash
+pytest -q
 ```
 
 ## Full mode
 Set all variables in `.env` (see `.env.example`), set `DEMO_MODE=false`, then run the same command.
-
-## Tests
-```
-pytest -q
-```
 
 ## Deploy to Cloud Run
 ```

@@ -32,7 +32,7 @@ def seed_store(
     vehicles_data = data.get("vehicles", [])
     drivers_data = data.get("drivers", [])
 
-    counts = {"orders": 0, "vehicles": 0, "drivers": 0}
+    counts = {"orders": 0, "vehicles": 0, "drivers": 0, "events": 0}
 
     for order_dict in orders_data:
         order = Order(**order_dict)
@@ -49,11 +49,21 @@ def seed_store(
         target_store.set("drivers", driver.id, driver)
         counts["drivers"] += 1
 
+    # Seed historical delivery completion events for feedback loop
+    from core.feedback import get_default_historical_events
+
+    events_data = data.get("events") or get_default_historical_events()
+    for evt_dict in events_data:
+        evt_id = evt_dict.get("event_id") or f"evt_{counts['events']}"
+        target_store.set("events", evt_id, evt_dict)
+        counts["events"] += 1
+
     logger.info(
-        "Seeding complete: %d orders, %d vehicles, %d drivers",
+        "Seeding complete: %d orders, %d vehicles, %d drivers, %d events",
         counts["orders"],
         counts["vehicles"],
         counts["drivers"],
+        counts["events"],
     )
     return counts
 

@@ -269,4 +269,10 @@ class Event(BaseModel):
     event_type: str = Field(..., description="Event type identifier")
     timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     source: str = Field(..., description="Source component or function")
+    status: Optional[str] = Field("info", description="Event status or result: info, success, warning, error, failed")
+    message: Optional[str] = Field(None, description="Descriptive human-readable event message")
+    reason: Optional[str] = Field(None, description="Reason code or explanation")
+    severity: Optional[str] = Field("medium", description="Severity level: low, medium, high, critical")
     details: Dict[str, Any] = Field(default_factory=dict)
+    metadata: Optional[Dict[str, Any]] = Field(default_factory=dict)
+

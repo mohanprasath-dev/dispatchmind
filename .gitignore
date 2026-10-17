@@ -53,5 +53,6 @@ htmlcov/
 local_store/
 local_store.json
 data/local_store.json
+data/docs/
 *.log
 *.zip
