@@ -1,0 +1,58 @@
+steps:
+  # 1. Run full test suite to guarantee regression-free releases
+  - name: 'python:3.11-slim'
+    id: 'Run Tests'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        pip install --no-cache-dir -r requirements.txt
+        pytest -q
+
+  # 2. Build production container image
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Build Image'
+    args:
+      - 'build'
+      - '--no-cache'
+      - '-t'
+      - 'asia-south1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/dispatchmind:$COMMIT_SHA'
+      - '-t'
+      - 'asia-south1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/dispatchmind:latest'
+      - '.'
+      - '-f'
+      - 'Dockerfile'
+
+  # 3. Push container image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Push Image'
+    args:
+      - 'push'
+      - '--all-tags'
+      - 'asia-south1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/dispatchmind'
+
+  # 4. Deploy to Cloud Run in asia-south1
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    id: 'Deploy to Cloud Run'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'dispatchmind'
+      - '--image=asia-south1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/dispatchmind:$COMMIT_SHA'
+      - '--region=asia-south1'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--set-env-vars=DEMO_MODE=true,GOOGLE_CLOUD_PROJECT=$PROJECT_ID'
+      - '--set-secrets=GOOGLE_API_KEY=gemini-key:latest'
+      - '--memory=1Gi'
+      - '--cpu=1'
+      - '--timeout=300'
+      - '--quiet'
+
+images:
+  - 'asia-south1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/dispatchmind:$COMMIT_SHA'
+  - 'asia-south1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/dispatchmind:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
