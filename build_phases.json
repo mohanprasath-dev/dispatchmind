@@ -1,0 +1,209 @@
+{
+  "project": "DispatchMind",
+  "how_to_use": "Paste one phase object at a time into your coding agent. Read AGENTS.md and PRD.md first. Do not start a phase until the previous phase's acceptance_criteria pass.",
+  "global_context": {
+    "stack": "Python 3.11, Google ADK, Gemini gemini-2.5-flash, fastmcp, OR-Tools, FastAPI, Firestore (JSON fallback), Telegram Bot API, Cloud Run",
+    "must_read": ["AGENTS.md", "PRD.md", "SECRETS_AND_APIS.md"],
+    "global_rules": [
+      "No hardcoded secrets",
+      "DEMO_MODE=true must run with only GOOGLE_API_KEY",
+      "All external calls go through core/resilience.py",
+      "Pydantic models for all agent IO",
+      "Check installed google-adk and fastmcp docs for exact import paths before coding, do not guess APIs",
+      "No em dashes in docs or copy",
+      "Stop and ask if a requirement is ambiguous"
+    ]
+  },
+  "phases": [
+    {
+      "id": "P0",
+      "name": "Scaffold and config",
+      "goal": "Runnable skeleton with config, models, store and seed data.",
+      "tasks": [
+        "Create repo layout from AGENTS.md",
+        "requirements.txt with google-adk, fastmcp, ortools, fastapi, uvicorn, pydantic, httpx, google-cloud-firestore, python-dotenv, pytest",
+        "core/config.py loading env with defaults and DEMO_MODE flag",
+        "core/models.py: Order, Vehicle, Driver, RoutePlan, Stop, Alert, RecoveryAction, PODResult, TuningUpdate, MissingFields",
+        "core/store.py: Firestore implementation and JSON-file implementation behind one interface",
+        "core/seed.py plus data/seed.json: 12 orders around Chennai, 4 vehicles, 4 drivers",
+        ".gitignore, .env.example"
+      ],
+      "files": ["requirements.txt", "core/config.py", "core/models.py", "core/store.py", "core/seed.py", "data/seed.json"],
+      "acceptance_criteria": [
+        "python -m core.seed populates the store in DEMO_MODE",
+        "pytest passes for store read/write",
+        "No secrets in repo"
+      ],
+      "do_not": ["Build any agent yet", "Add auth or multi-tenancy"]
+    },
+    {
+      "id": "P1",
+      "name": "Resilience layer",
+      "goal": "Reusable self-healing wrapper used by every tool call.",
+      "tasks": [
+        "core/resilience.py: decorator resilient(fallback=None, retries=3, backoff=exp) ",
+        "On final failure: call fallback, log event to events collection, return a structured Degraded result",
+        "Escalation hook that creates an 'needs_human' event",
+        "Unit tests with a flaky function that fails N times"
+      ],
+      "files": ["core/resilience.py", "tests/test_resilience.py"],
+      "acceptance_criteria": [
+        "Flaky function succeeds after 2 failures",
+        "Permanent failure triggers fallback and logs an event",
+        "Escalation event appears in the store"
+      ],
+      "do_not": ["Swallow exceptions silently"]
+    },
+    {
+      "id": "P2",
+      "name": "MCP servers",
+      "goal": "All tools exposed as MCP servers with demo-mode fallbacks.",
+      "tasks": [
+        "orders_server.py: list_orders, get_order, create_order, update_order, assign_order, list_vehicles, log_event",
+        "maps_server.py: geocode, distance_matrix (Routes API computeRouteMatrix), eta_between. Fallback haversine x 1.4",
+        "weather_server.py: forecast_for_point using Open-Meteo, rain_risk(lat,lng,window)",
+        "notify_server.py: send_message(channel,chat_id,text). Telegram, or console fallback in DEMO_MODE",
+        "docs_server.py: save_file, get_file (local folder or GCS)",
+        "Wrap every network call with resilient()"
+      ],
+      "files": ["mcp_servers/*.py", "tests/test_mcp.py"],
+      "acceptance_criteria": [
+        "Each server starts standalone",
+        "Each tool callable from a test client",
+        "Maps tool works with no key via fallback"
+      ],
+      "do_not": ["Put agent logic in MCP servers"]
+    },
+    {
+      "id": "P3",
+      "name": "Intake agent (multi-modal)",
+      "goal": "Image or PDF or text to validated Order.",
+      "tasks": [
+        "agents/intake.py ADK agent with Gemini multi-modal input",
+        "Instruction: extract fields, never invent, return confidence per field",
+        "Validation: 6 digit pincode, 10 digit Indian phone, GSTIN format, weight > 0",
+        "Return MissingFields with one precise question per gap",
+        "On valid order call orders.create_order and geocode address",
+        "Add 5 sample invoices and e-way bill images to data/sample_orders/"
+      ],
+      "files": ["agents/intake.py", "data/sample_orders/", "tests/test_intake.py"],
+      "acceptance_criteria": [
+        "4 of 5 sample docs extract correctly",
+        "Missing pincode triggers exactly one question",
+        "Order appears in store with lat/lng"
+      ],
+      "do_not": ["Guess missing fields", "Accept confidence below 0.6 without asking"]
+    },
+    {
+      "id": "P4",
+      "name": "Planner agent",
+      "goal": "Capacity and time-window routing.",
+      "tasks": [
+        "agents/planner.py with OR-Tools VRP (capacity, time windows, service time)",
+        "Distance matrix from maps MCP tool",
+        "Apply eta_buffer_min per pincode from tuning collection",
+        "Output RoutePlan with stop sequence, ETAs, total_km, unassigned with reasons",
+        "Store plan in routes collection"
+      ],
+      "files": ["agents/planner.py", "tests/test_planner.py"],
+      "acceptance_criteria": [
+        "No vehicle over capacity",
+        "Hard windows respected or order listed as unassigned with reason",
+        "Plan for 12 orders and 4 vehicles in under 15 s"
+      ],
+      "do_not": ["Call Gemini for the math, use it only to explain the plan"]
+    },
+    {
+      "id": "P5",
+      "name": "Monitor and Recovery agents",
+      "goal": "Detect problems and fix them automatically.",
+      "tasks": [
+        "agents/monitor.py: loop every MONITOR_INTERVAL_SEC, compare live vs planned ETA, check rain risk, idle detection, emit Alert",
+        "Failure injection endpoints: delay vehicle, vehicle breakdown, customer unreachable, address wrong",
+        "agents/recovery.py: choose re-sequence, reassign, or reschedule; auto-apply if delay <= AUTO_APPLY_MAX_DELAY_MIN else propose to dispatcher",
+        "Log every alert, action, result to events",
+        "Trigger Comms agent after any ETA change"
+      ],
+      "files": ["agents/monitor.py", "agents/recovery.py", "app/inject.py", "tests/test_recovery.py"],
+      "acceptance_criteria": [
+        "Injected breakdown results in reassigned orders and updated ETAs",
+        "Injected API failure results in fallback path and an event",
+        "At least 80 percent of 10 injected failures recovered in test"
+      ],
+      "do_not": ["Auto-apply a change that violates capacity or hard windows"]
+    },
+    {
+      "id": "P6",
+      "name": "Comms and POD agents",
+      "goal": "Conversational messaging and proof of delivery.",
+      "tasks": [
+        "agents/comms.py: dispatcher chat, driver messages, customer ETA updates, replies in English, Hindi, Tamil",
+        "Templates are guidance only, the model writes short messages",
+        "agents/pod.py: Gemini vision verifies delivery photo, extracts recipient name, confidence score",
+        "Low confidence creates needs_human event",
+        "On success set order status delivered and store photo via docs MCP"
+      ],
+      "files": ["agents/comms.py", "agents/pod.py", "tests/test_pod.py"],
+      "acceptance_criteria": [
+        "ETA change sends one customer message with new time",
+        "Hindi and Tamil replies work for a sample query",
+        "POD photo closes an order, a blank photo does not"
+      ],
+      "do_not": ["Send more than one message per event per customer"]
+    },
+    {
+      "id": "P7",
+      "name": "Feedback agent",
+      "goal": "Learn from outcomes and visibly improve ETAs.",
+      "tasks": [
+        "core/feedback.py: aggregate predicted vs actual ETA error by pincode and hour band",
+        "agents/feedback.py: write eta_buffer_min to tuning, tag failure reasons, propose prompt diffs as text only",
+        "Seed historical events so a before and after comparison exists",
+        "Expose before and after error metric via API"
+      ],
+      "files": ["core/feedback.py", "agents/feedback.py", "tests/test_feedback.py"],
+      "acceptance_criteria": [
+        "Running feedback changes buffers for at least 3 pincodes",
+        "Next plan uses the new buffers",
+        "Measured ETA error drops on seeded data"
+      ],
+      "do_not": ["Auto-edit prompts or code"]
+    },
+    {
+      "id": "P8",
+      "name": "Orchestrator and UI",
+      "goal": "One entry point and a demo-ready interface.",
+      "tasks": [
+        "agents/orchestrator.py ADK root agent routing to sub-agents",
+        "app/main.py FastAPI: /chat, /upload, /plan, /events, /inject/{type}, /feedback/run",
+        "app/static: single page with chat, upload, route table (map if time), live event log, 'break something' panel, before/after ETA card",
+        "adk web must also load the root agent"
+      ],
+      "files": ["agents/orchestrator.py", "app/main.py", "app/static/index.html"],
+      "acceptance_criteria": [
+        "Full demo flow works: upload, plan, inject failure, recover, notify, POD, feedback",
+        "UI shows event log updating live",
+        "No unhandled errors in console"
+      ],
+      "do_not": ["Add login", "Add frameworks beyond plain HTML and JS"]
+    },
+    {
+      "id": "P9",
+      "name": "Deploy and docs",
+      "goal": "Judge-ready repo.",
+      "tasks": [
+        "Dockerfile and Cloud Run deploy command in README",
+        "README.md A to Z: prerequisites, clone, env, demo mode run, full mode run, ADK web, tests, deploy, demo script, troubleshooting, architecture diagram",
+        "Final pass: remove dead code, confirm .env.example, confirm no secrets in git history",
+        "Fresh clone test on a clean machine or container following README only"
+      ],
+      "files": ["Dockerfile", "README.md", "docs/"],
+      "acceptance_criteria": [
+        "Fresh clone runs in demo mode in under 10 minutes using README only",
+        "Cloud Run URL works",
+        "Every competition criterion is mapped in README"
+      ],
+      "do_not": ["Leave TODOs in README"]
+    }
+  ]
+}
