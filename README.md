@@ -19,12 +19,77 @@ Multi-agent system that automates order intake, route planning, live monitoring,
 | Self-healing | `core/resilience.py` retry, fallback, escalate; Recovery agent |
 
 ## Architecture
-```
-Chat UI / Telegram -> Orchestrator (ADK)
-  Intake | Planner | Monitor | Recovery | Comms | POD | Feedback
-                     MCP tool layer
-  orders | maps | weather | notify | docs
-        Firestore, Maps, Open-Meteo, Telegram, Cloud Storage
+
+```mermaid
+flowchart TD
+    UI["Chat UI / Telegram"] --> ORC["Orchestrator (ADK)"]
+
+    subgraph AGENTS["Agent Layer"]
+        IN["Intake"]
+        PL["Planner"]
+        MO["Monitor"]
+        RE["Recovery"]
+        CO["Comms"]
+        POD["POD"]
+        FE["Feedback"]
+    end
+
+    ORC --> IN
+    ORC --> PL
+    ORC --> MO
+    ORC --> RE
+    ORC --> CO
+    ORC --> POD
+    ORC --> FE
+
+    subgraph MCP_LAYER["MCP Tool Layer"]
+        MCP["MCP Server / Tool Router"]
+        ORD["Orders"]
+        MAP["Maps"]
+        WEA["Weather"]
+        NOT["Notify"]
+        DOC["Docs"]
+
+        MCP --> ORD
+        MCP --> MAP
+        MCP --> WEA
+        MCP --> NOT
+        MCP --> DOC
+    end
+
+    IN --> MCP
+    PL --> MCP
+    MO --> MCP
+    RE --> MCP
+    CO --> MCP
+    POD --> MCP
+    FE --> MCP
+
+    subgraph BACKEND["Backend Services"]
+        FS[("Firestore")]
+        GM["Google Maps API"]
+        OM["Open-Meteo API"]
+        TG["Telegram Bot API"]
+        CS[("Cloud Storage")]
+    end
+
+    ORD --> FS
+    MAP --> GM
+    WEA --> OM
+    NOT --> TG
+    DOC --> CS
+
+    classDef interface fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef orchestrator fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+    classDef agent fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef tools fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef backend fill:#f3f4f6,stroke:#6b7280,color:#111827
+
+    class UI interface
+    class ORC orchestrator
+    class IN,PL,MO,RE,CO,POD,FE agent
+    class MCP,ORD,MAP,WEA,NOT,DOC tools
+    class FS,GM,OM,TG,CS backend
 ```
 
 ## Prerequisites
