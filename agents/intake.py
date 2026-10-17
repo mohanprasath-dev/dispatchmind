@@ -164,9 +164,9 @@ def deterministic_text_extractor(text: str) -> Dict[str, Any]:
                 pass
 
         # Time Window
-        window_match = re.match(r"^\d{1,2}:\d{2}\s*[\-\–]\s*\d{1,2}:\d{2}$", line)
+        window_match = re.match(r"^\d{1,2}:\d{2}\s*[\-\u2013\u2014]\s*\d{1,2}:\d{2}$", line)
         if window_match and data["time_window"] is None:
-            data["time_window"] = line.replace("–", "-").strip()
+            data["time_window"] = re.sub(r"[\u2013\u2014]", "-", line).strip()
             confidences["time_window"] = 0.92
 
     # Fallback search if fields still missing
@@ -222,9 +222,9 @@ def deterministic_text_extractor(text: str) -> Dict[str, Any]:
                 pass
 
     if not data["time_window"]:
-        m_win = re.search(r"(\d{1,2}:\d{2}\s*[\-\–]\s*\d{1,2}:\d{2})", text)
+        m_win = re.search(r"(\d{1,2}:\d{2}\s*[\-\u2013\u2014]\s*\d{1,2}:\d{2})", text)
         if m_win:
-            data["time_window"] = m_win.group(1).replace("–", "-").strip()
+            data["time_window"] = re.sub(r"[\u2013\u2014]", "-", m_win.group(1)).strip()
             confidences["time_window"] = 0.85
         else:
             data["time_window"] = "09:00 - 18:00"

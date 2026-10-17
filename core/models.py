@@ -137,6 +137,9 @@ class UnassignedOrder(BaseModel):
     order_id: str = Field(..., description="Unassigned order ID")
     reason: str = Field(..., description="Reason why order could not be assigned")
 
+    def __getitem__(self, item: str):
+        return getattr(self, item)
+
 
 class RoutePlan(BaseModel):
     """Master route plan across the fleet."""
