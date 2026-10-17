@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DispatchMind | Multi-Agent Dispatch Co-Pilot</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+  <!-- Top Sticky Header -->
+  <header class="top-header">
+    <div class="app-container">
+      <div class="header-content">
+        <div class="brand-section">
+          <div class="logo-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+              <path d="M2 17l10 5 10-5"></path>
+              <path d="M2 12l10 5 10-5"></path>
+            </svg>
+          </div>
+          <div class="brand-info">
+            <h1>DispatchMind <span style="font-size:0.75rem; color:var(--accent-blue); font-weight:600; padding:2px 8px; background:rgba(56,189,248,0.1); border-radius:4px; border:1px solid rgba(56,189,248,0.3);">CO-PILOT</span></h1>
+            <div class="tagline">
+              <span class="live-indicator"></span>
+              Chennai Metropolitan Fleet: 4 Active Vehicles
+            </div>
+          </div>
+        </div>
+
+        <div class="header-controls">
+          <div class="status-chip active">
+            <span class="dot"></span>
+            DEMO MODE (FastAPI + JSON Store)
+          </div>
+          <button id="btn-replan" class="btn btn-secondary btn-sm">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <polyline points="1 20 1 14 7 14"></polyline>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+            Re-Plan Day
+          </button>
+          <button id="btn-run-feedback" class="btn btn-primary btn-sm">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+            </svg>
+            Run Feedback
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-container">
+
+    <!-- KPI Summary Row -->
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="1" y="3" width="15" height="13"></rect>
+            <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+            <circle cx="5.5" cy="18.5" r="2.5"></circle>
+            <circle cx="18.5" cy="18.5" r="2.5"></circle>
+          </svg>
+        </div>
+        <div>
+          <div class="kpi-label">Active Fleet</div>
+          <div class="kpi-value">4 Vehicles</div>
+          <div class="kpi-sub">Tata Ace, Dost, Bolero, Eicher</div>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon green">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+          </svg>
+        </div>
+        <div>
+          <div class="kpi-label">Consignments Planned</div>
+          <div id="kpi-total-deliveries" class="kpi-value">12 Orders</div>
+          <div class="kpi-sub">0 Hard Window Violations</div>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon amber">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
+            <line x1="8" y1="2" x2="8" y2="18"></line>
+            <line x1="16" y1="6" x2="16" y2="22"></line>
+          </svg>
+        </div>
+        <div>
+          <div class="kpi-label">Route Mileage</div>
+          <div id="kpi-fleet-km" class="kpi-value">165.5 km</div>
+          <div class="kpi-sub">OR-Tools VRP Optimized</div>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon purple">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+        </div>
+        <div>
+          <div class="kpi-label">Learned ETA Tuning</div>
+          <div class="kpi-value">-75.0% Error</div>
+          <div class="kpi-sub">4 Pincodes Buffered</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Row 1: Intake & Chat (Col-7) + Failure Injection Panel (Col-5) -->
+    <div class="dashboard-grid">
+      
+      <!-- Panel 1: Intake & Chat -->
+      <div class="panel-card col-7">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+            </svg>
+            Dispatcher Co-Pilot & Multi-Modal Intake
+          </div>
+          <span style="font-size:0.75rem; color:var(--text-muted);">Gemini Multimodal</span>
+        </div>
+
+        <div class="panel-body">
+          <!-- Sub Tabs -->
+          <div class="tab-nav">
+            <button id="tab-intake" class="tab-btn active">Document Intake Upload</button>
+            <button id="tab-chat" class="tab-btn">Dispatcher Chat Console</button>
+          </div>
+
+          <!-- Tab Content A: Document Intake -->
+          <div id="panel-intake">
+            <div id="dropzone" class="dropzone-box">
+              <input type="file" id="file-input" style="display:none;" accept=".pdf,.png,.jpg,.jpeg">
+              <div class="dropzone-icon">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+              </div>
+              <div class="dropzone-text">Drop Invoice, e-Way Bill, or Label Photo / PDF here</div>
+              <div class="dropzone-hint">Supports PDF, PNG, JPG. Extracts GSTIN, weights, delivery windows, addresses.</div>
+            </div>
+
+            <!-- Quick Load Sample Documents -->
+            <div class="quick-samples">
+              <span class="quick-samples-label">Quick Test Sample Documents:</span>
+              <div id="sample-chips-container" class="sample-chips">
+                <!-- Chips populated by app.js -->
+              </div>
+            </div>
+
+            <!-- Extracted Result Container -->
+            <div id="extract-result-container" style="display:none;"></div>
+          </div>
+
+          <!-- Tab Content B: Dispatcher Chat -->
+          <div id="panel-chat" style="display:none;">
+            <div class="chat-container">
+              <div id="chat-history" class="chat-history">
+                <div class="chat-bubble assistant">
+                  <div class="bubble-meta">DispatchMind Orchestrator</div>
+                  <div class="bubble-text">
+                    Chennai fleet dispatch co-pilot online. Ask me about vehicle positions, route status, reassignment proposals, or driver updates.
+                  </div>
+                </div>
+              </div>
+
+              <!-- Quick Query Suggestions -->
+              <div class="chat-suggestions">
+                <button type="button" class="suggestion-pill" data-query="Where is vehicle TN-09-AB-1234?">Where is TN-09-AB-1234?</button>
+                <button type="button" class="suggestion-pill" data-query="Plan today's routes">Plan today's routes</button>
+                <button type="button" class="suggestion-pill" data-query="Simulate vehicle breakdown">Simulate breakdown</button>
+                <button type="button" class="suggestion-pill" data-query="Show active Chennai pincode buffers">Check ETA buffers</button>
+              </div>
+
+              <form id="chat-form" class="chat-form">
+                <input type="text" id="chat-input" class="chat-input" placeholder="Type a message or instruction (e.g. 'Where is Murugan?')..." autocomplete="off">
+                <button type="submit" class="btn btn-primary">Send</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 2: Failure Injection ("Break Something") -->
+      <div class="panel-card col-5">
+        <div class="panel-header">
+          <div class="panel-title" style="color:#f87171;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+            "Break Something" Failure Injection
+          </div>
+          <span style="font-size:0.75rem; color:var(--text-muted);">Self-Healing Demo</span>
+        </div>
+
+        <div class="panel-body">
+          <div id="failure-status-banner" class="failure-banner">
+            Inject real-world Indian road and dispatch failures to observe autonomous detection, OR-Tools re-sequencing, and Telegram comms in real time.
+          </div>
+
+          <div class="failure-grid">
+            <!-- Breakdown -->
+            <div class="failure-card breakdown">
+              <div>
+                <div class="failure-card-header">
+                  <div class="failure-card-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                      <line x1="12" y1="9" x2="12" y2="13"></line>
+                      <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                  </div>
+                  <div class="failure-card-title">Vehicle Breakdown</div>
+                </div>
+                <div class="failure-card-desc">
+                  Simulates Tata Ace radiator leak on GST Road. Recovery agent reassigns pending stops to backup vehicle.
+                </div>
+              </div>
+              <button id="btn-breakdown" class="btn-trigger">Break TN-09-AB-1234</button>
+            </div>
+
+            <!-- Traffic -->
+            <div class="failure-card traffic">
+              <div>
+                <div class="failure-card-header">
+                  <div class="failure-card-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                  </div>
+                  <div class="failure-card-title">Traffic Congestion</div>
+                </div>
+                <div class="failure-card-desc">
+                  +35 min delay at Kathipara Junction. Monitor detects ETA drift; Recovery diverts via Inner Ring Road.
+                </div>
+              </div>
+              <button id="btn-traffic" class="btn-trigger">Inject Kathipara Jam</button>
+            </div>
+
+            <!-- Wrong Address -->
+            <div class="failure-card address">
+              <div>
+                <div class="failure-card-header">
+                  <div class="failure-card-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                      <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                  </div>
+                  <div class="failure-card-title">Locked Gate / Unreachable</div>
+                </div>
+                <div class="failure-card-desc">
+                  Consignee locked at Anna Nagar. Recovery reschedules stop to end of loop and triggers WhatsApp link.
+                </div>
+              </div>
+              <button id="btn-address" class="btn-trigger">Simulate Gate Locked</button>
+            </div>
+
+            <!-- Rain Alert -->
+            <div class="failure-card rain">
+              <div>
+                <div class="failure-card-header">
+                  <div class="failure-card-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="16" y1="13" x2="16" y2="21"></line>
+                      <line x1="8" y1="13" x2="8" y2="21"></line>
+                      <line x1="12" y1="15" x2="12" y2="23"></line>
+                      <path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"></path>
+                    </svg>
+                  </div>
+                  <div class="failure-card-title">Monsoon Rain Alert</div>
+                </div>
+                <div class="failure-card-desc">
+                  Open-Meteo flood risk in Velachery. Adjusts speed factor to 1.4x and reprioritizes dry cargo.
+                </div>
+              </div>
+              <button id="btn-rain" class="btn-trigger">Simulate Rain Storm</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 2: Route Planning Table (Col-12) -->
+    <div class="dashboard-grid">
+      <div class="panel-card col-12">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
+            </svg>
+            Active Route Schedules & Stop Sequences (OR-Tools VRP)
+          </div>
+          <span style="font-size:0.75rem; color:var(--text-muted);">Automated Stop Allocation</span>
+        </div>
+
+        <div class="panel-body">
+          <div id="vehicle-filter-tabs" class="vehicle-selector-tabs">
+            <!-- Tabs generated by app.js -->
+          </div>
+
+          <div id="routes-container">
+            <!-- Vehicle Cards and Stops Tables rendered by app.js -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 3: POD Simulator (Col-6) + Feedback Tuning Card (Col-6) -->
+    <div class="dashboard-grid">
+      
+      <!-- Panel 3: Proof of Delivery (POD) -->
+      <div class="panel-card col-6">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <circle cx="8.5" cy="8.5" r="1.5"></circle>
+              <polyline points="21 15 16 10 5 21"></polyline>
+            </svg>
+            Driver POD Simulator (Gemini Vision)
+          </div>
+          <span style="font-size:0.75rem; color:var(--text-muted);">Photo Verification</span>
+        </div>
+
+        <div class="panel-body">
+          <form id="pod-form" class="pod-form">
+            <div class="form-group">
+              <label class="form-label">Consignment / Order ID</label>
+              <select id="pod-order-id" class="form-select">
+                <option value="ORD-2026-104">ORD-2026-104 (Nilgiri Retail Depot - Velachery)</option>
+                <option value="ORD-2026-101">ORD-2026-101 (Apex Auto Spares - T. Nagar)</option>
+                <option value="ORD-2026-103">ORD-2026-103 (SmartTech - Adyar)</option>
+                <option value="ORD-2026-105">ORD-2026-105 (Krishna Construction - Anna Nagar)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Recipient Signed Name</label>
+              <input type="text" id="pod-recipient" class="form-input" value="S. Venkatachalam (Store Manager)">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Delivery Photo Verification</label>
+              <input type="file" id="pod-file-input" class="form-input" accept="image/*">
+            </div>
+
+            <div style="display:flex; gap:10px; margin-top:6px;">
+              <button type="submit" class="btn btn-primary" style="flex:1;">
+                Verify & Close Order
+              </button>
+              <button type="button" id="btn-use-sample-pod" class="btn btn-secondary">
+                Use Sample Proof
+              </button>
+            </div>
+          </form>
+
+          <div id="pod-result-card" class="pod-result-card" style="display:none;"></div>
+        </div>
+      </div>
+
+      <!-- Panel 4: Feedback Before / After Tuning Card -->
+      <div class="panel-card col-6">
+        <div class="panel-header">
+          <div class="panel-title" style="color:#34d399;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+            Feedback Loop: ETA Improvement Engine
+          </div>
+          <span style="font-size:0.75rem; color:var(--text-muted);">Self-Correcting</span>
+        </div>
+
+        <div class="panel-body">
+          <div class="feedback-summary">
+            <div class="feedback-stat-box before">
+              <div class="feedback-stat-lbl">Pre-Tuning Error (MAE)</div>
+              <div class="feedback-stat-num">24.8 min</div>
+              <div style="font-size:0.7rem; color:var(--text-dim);">P90 Variance: 42.0 min</div>
+            </div>
+
+            <div class="feedback-stat-box after">
+              <div class="feedback-stat-lbl">Post-Tuning Error (MAE)</div>
+              <div class="feedback-stat-num">6.2 min</div>
+              <div style="font-size:0.7rem; color:var(--accent-green);">P90 Variance: 11.5 min</div>
+            </div>
+          </div>
+
+          <div style="background:var(--bg-input); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <strong style="font-size:0.775rem; text-transform:uppercase; color:var(--text-dim);">Learned Postal Buffers (eta_buffer_min)</strong>
+              <span id="feedback-reduction" style="font-size:0.75rem; color:var(--accent-green); font-weight:700;">-75.0% Error Drop</span>
+            </div>
+            
+            <table class="buffer-table">
+              <thead>
+                <tr>
+                  <th>Chennai Zone</th>
+                  <th>Pincode</th>
+                  <th>Learned Buffer</th>
+                  <th>Reason Tag</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>T. Nagar Commercial</td>
+                  <td style="font-family:var(--font-mono);">600017</td>
+                  <td style="color:#fcd34d; font-weight:700;">+12 min</td>
+                  <td>Peak retail market congestion</td>
+                </tr>
+                <tr>
+                  <td>Velachery Bypass</td>
+                  <td style="font-family:var(--font-mono);">600042</td>
+                  <td style="color:#fcd34d; font-weight:700;">+18 min</td>
+                  <td>Monsoon drainage slow zone</td>
+                </tr>
+                <tr>
+                  <td>Ambattur Industrial</td>
+                  <td style="font-family:var(--font-mono);">600058</td>
+                  <td style="color:#fcd34d; font-weight:700;">+8 min</td>
+                  <td>Heavy freight checkpost entry</td>
+                </tr>
+                <tr>
+                  <td>Adyar Residential</td>
+                  <td style="font-family:var(--font-mono);">600020</td>
+                  <td style="color:#fcd34d; font-weight:700;">+5 min</td>
+                  <td>Standard arterial transit</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 4: Live Event Log (Col-12) -->
+    <div class="dashboard-grid">
+      <div class="panel-card col-12">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+              <polyline points="13 2 13 9 20 9"></polyline>
+            </svg>
+            Live Autonomous Multi-Agent Event Log
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button id="btn-toggle-polling" class="btn btn-secondary btn-sm" style="border-color:#10b981; color:#34d399;">
+              Auto-Polling: ON
+            </button>
+            <button id="btn-refresh-events" class="btn btn-secondary btn-sm">
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        <div class="panel-body">
+          <!-- Filters -->
+          <div class="event-filters">
+            <button class="filter-btn active" data-filter="all">All Events</button>
+            <button class="filter-btn" data-filter="alerts">Alerts Only</button>
+            <button class="filter-btn" data-filter="recoveries">Recoveries</button>
+            <button class="filter-btn" data-filter="comms">Comms & Telegram</button>
+            <button class="filter-btn" data-filter="system">System & Plan</button>
+          </div>
+
+          <!-- Event Stream Feed -->
+          <div id="event-stream" class="event-stream">
+            <!-- Events rendered live by app.js -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Client Application Script -->
+  <script src="/static/app.js"></script>
+</body>
+</html>
